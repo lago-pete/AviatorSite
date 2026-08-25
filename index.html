@@ -110,7 +110,7 @@
           console.log("HDOP: " + jsonObject.gps.hdop);
           console.log("Altitude: " + jsonObject.gps.altitude);
           console.log("Time: " + jsonObject.gps.time.hour + ":" + jsonObject.gps.time.minute + ":" + jsonObject.gps.time.sec);
-        }  else {
+        }  else {  ///need to check if its stale and indicate if it stale and if so display last known location. 
           console.log("--- GPS ---");
           console.log("Lat: " + jsonObject.gps.lat + " " + jsonObject.gps.latDir);
           console.log("Lon: " + jsonObject.gps.lon + " " + jsonObject.gps.lonDir);
