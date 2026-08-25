@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head><title>Flight Dashboard</title></head>
+<body>
+  <h1>Dashboard test</h1>
+  <script>
+    const socket = new WebSocket("ws://10.42.0.1:8080");
+    socket.onopen = () => console.log("connected");
+    socket.onmessage = (event) => console.log(event.data);
+  </script>
+</body>
+</html>
