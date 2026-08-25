@@ -1,22 +1,136 @@
 <!DOCTYPE html>
 <html>
-<head><title>Flight Dashboard</title></head>
+
+<head>
+  <title>Flight Dashboard</title>
+</head>
+
 <body>
   <h1>Dashboard test</h1>
   <div id="dashboard"></div>
   <script>
     const socket = new WebSocket("ws://10.42.0.1:8080");
     socket.onopen = () => console.log("connected");
+    let gpsTimeCheck = { hour: 0, minute: 0, sec: 0 };
     socket.onmessage = (event) => {
       console.log(event.data);
-      const jsonObject = JSON.parse(event.data);
 
-    document.getElementById("dashboard").innerHTML = `
-      <p>Flight Number: ${jsonObject.flightNumber}</p>
-      <p>Altitude: ${jsonObject.altitude}</p>
-      <p>Speed: ${jsonObject.speed}</p>
-    `;
+      function isValidJSON(str) {
+        try {
+          const jsonObject = JSON.parse(event.data);
+          if (jsonObject.gps.valid === false) {  
+            console.log("Invalid GPS Reading.");
+          } else {
+            console.log(jsonObject);
+          }
+          return jsonObject;
+        } catch (error) {
+          console.log("Error parsing JSON: ", error);
+          return;
+        }
+      }
+      const jsonObject = isValidJSON(event.data);
+      if (!jsonObject) {
+        console.log("Received invalid JSON data.");
+        return;
+      }
+      else {
+        console.log("Received valid JSON data.");
+
+        if (!jsonObject.mpu.valid) {
+          console.log("!!!MPU Reading Not Valid!!! " + jsonObject.mpu.accelX);
+          console.log("--- MPU ---");
+          console.log("Accel X: " + "--------------------");
+          console.log("Accel Y: " + "--------------------");
+          console.log("Accel Z: " + "--------------------");
+          console.log("Temp: " + "--------------------");
+          console.log("Gyro X: " + "--------------------");
+          console.log("Gyro Y: " + "--------------------");
+          console.log("Gyro Z: " + "--------------------");
+          console.log("Valid: " + "--------------------");
+        } else {
+          console.log("--- MPU ---");
+          console.log("Accel X: " + jsonObject.mpu.accelX);
+          console.log("Accel Y: " + jsonObject.mpu.accelY);
+          console.log("Accel Z: " + jsonObject.mpu.accelZ);
+          console.log("Temp: " + jsonObject.mpu.temp);
+          console.log("Gyro X: " + jsonObject.mpu.gyroX);
+          console.log("Gyro Y: " + jsonObject.mpu.gyroY);
+          console.log("Gyro Z: " + jsonObject.mpu.gyroZ);
+          console.log("Valid: " + jsonObject.mpu.valid);
+        }
+
+        if (!jsonObject.bme.valid) {
+          console.log("!!!!BME Reading Not Valid!!!!");
+          console.log("Temperature: " + "--------------------");
+          console.log("Humidity: " + "--------------------");
+          console.log("Pressure: " + "--------------------");
+          console.log("Gas Resistance: " + "--------------------");
+          console.log("Valid: " + "--------------------");
+        } else {
+          console.log("--- BME ---");
+          console.log("Temperature: " + jsonObject.bme.temperature);
+          console.log("Humidity: " + jsonObject.bme.humidity);
+          console.log("Pressure: " + jsonObject.bme.pressure);
+          console.log("Gas Resistance: " + jsonObject.bme.gasResistance);
+          console.log("Valid: " + jsonObject.bme.valid);
+        }
+
+        if (!jsonObject.comp.valid) {
+          console.log("!!!!Compass Reading Not Valid!!!!");
+          console.log("Heading Degrees: " + "--------------------");
+          console.log("Raw X: " + "--------------------");
+          console.log("Raw Y: " + "--------------------");
+          console.log("Raw Z: " + "--------------------");
+          console.log("Valid: " + "--------------------");
+        } else {
+          console.log("--- Compass ---");
+          console.log("Heading Degrees: " + jsonObject.comp.headingDegrees);
+          console.log("Raw X: " + jsonObject.comp.rawX);
+          console.log("Raw Y: " + jsonObject.comp.rawY);
+          console.log("Raw Z: " + jsonObject.comp.rawZ);
+          console.log("Valid: " + jsonObject.comp.valid);
+        }
+
+        if (jsonObject.gps.time.hour === 0 && jsonObject.gps.time.minute === 0 && jsonObject.gps.time.sec === 0) {
+          console.log("!!!!GPS Reading Not Valid!!!!");
+          console.log("Lat: " + "--------------------" + " " + "--------------------");
+          console.log("Lon: " + "--------------------" + " " + "--------------------");
+          console.log("Fix Quality: " + "--------------------");
+          console.log("Sat Count: " + "--------------------");
+          console.log("HDOP: " + "--------------------");
+          console.log("Altitude: " + "--------------------");
+          console.log("Time: " + jsonObject.gps.time.hour + ":" + jsonObject.gps.time.minute + ":" + jsonObject.gps.time.sec);
+        } else if (gpsTimeCheck.hour === jsonObject.gps.time.hour && gpsTimeCheck.minute === jsonObject.gps.time.minute && gpsTimeCheck.sec === jsonObject.gps.time.sec) {
+          console.log("!!!!Last Known GPS Reading!!!!");
+          console.log("Lat: " + jsonObject.gps.lat + " " + jsonObject.gps.latDir);
+          console.log("Lon: " + jsonObject.gps.lon + " " + jsonObject.gps.lonDir);
+          console.log("Fix Quality: " + jsonObject.gps.fixQual);
+          console.log("Sat Count: " + jsonObject.gps.satCount);
+          console.log("HDOP: " + jsonObject.gps.hdop);
+          console.log("Altitude: " + jsonObject.gps.altitude);
+          console.log("Time: " + jsonObject.gps.time.hour + ":" + jsonObject.gps.time.minute + ":" + jsonObject.gps.time.sec);
+        }  else {
+          console.log("--- GPS ---");
+          console.log("Lat: " + jsonObject.gps.lat + " " + jsonObject.gps.latDir);
+          console.log("Lon: " + jsonObject.gps.lon + " " + jsonObject.gps.lonDir);
+          console.log("Fix Quality: " + jsonObject.gps.fixQual);
+          console.log("Sat Count: " + jsonObject.gps.satCount);
+          console.log("HDOP: " + jsonObject.gps.hdop);
+          console.log("Altitude: " + jsonObject.gps.altitude);
+          console.log("Time: " + jsonObject.gps.time.hour + ":" + jsonObject.gps.time.minute + ":" + jsonObject.gps.time.sec);
+          gpsTimeCheck = jsonObject.gps.time;
+        }
+
+        console.log("");
+      }
+
+
+
+
+      
     };
   </script>
 </body>
+
 </html>
