@@ -25,10 +25,13 @@
   <script>
     const socket = new WebSocket("ws://10.42.0.1:8080");
     socket.onopen = () => console.log("connected");
+    const needle = document.querySelector("line");
+    let diff = 0;
+    let new_heading = 0;
+    let last_heading = 0;
     let gpsTimeCheck = { hour: 0, minute: 0, sec: 0 };
     socket.onmessage = (event) => {
       console.log(event.data);
-
       function isValidJSON(str) {
         try {
           const jsonObject = JSON.parse(event.data);
@@ -50,7 +53,7 @@
       }
       else {
         console.log("Received valid JSON data.");
-
+        new_heading = jsonObject.comp.headingDegrees;
         if (!jsonObject.mpu.valid) {
           console.log("!!!MPU Reading Not Valid!!! " + jsonObject.mpu.accelX);
           console.log("--- MPU ---");
@@ -135,9 +138,21 @@
           console.log("Time: " + jsonObject.gps.time.hour + ":" + jsonObject.gps.time.minute + ":" + jsonObject.gps.time.sec);
           gpsTimeCheck = jsonObject.gps.time;
         }
-
         console.log("");
+
+        diff = new_heading - last_heading;
+        if(diff > 180){
+          diff -= 360;
+        }
+        if(diff < -180){
+          diff += 360;
+        }
+        last_heading = diff;
+        
       }
+    
+    
+    needle.setAttribute("transform", `rotate(${last_heading},100,100)`);
     };
   </script>
 </body>
