@@ -3,46 +3,246 @@
 
 <head>
   <title>Flight Dashboard</title>
+  <style>
+    body { background: #111; color: #ccc; font-family: monospace; margin: 16px; }
+    h1 { font-size: 18px; font-weight: normal; }
+    .row { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+    .gauge { background: #000; border: 1px solid #444; }
+    .stale { opacity: 0.35; }
+    #data p { margin: 2px 0; }
+    /* let the moving parts slide a bit instead of jumping */
+    #ai_ball, #ai_pitch, #asi_scale, #alt_scale, #hdg_scale { transition: transform 0.15s linear; }
+  </style>
 </head>
 
 <body>
-  <h1>Dashboard test</h1>
-  <div id="dashboard"></div>
-  <svg width="200" height="200"> //A svg is a container with its own coordinate system.
-    <circle cx="100" cy="100" r="80" stroke="black" fill="none" />
-    <line id = "heading_needle" x1="100" y1="100" x2="100" y2="30" stroke="red" stroke-width="3" transform="rotate(45 100 100)"/>
+  <h1>Flight Dashboard</h1>
+
+  <div class="row">
+
+    <!-- airspeed tape -->
+    <svg id="asi" class="gauge" width="80" height="300">
+      <clipPath id="asi_clip"><rect x="0" y="0" width="80" height="300" /></clipPath>
+      <g clip-path="url(#asi_clip)"><g id="asi_scale"></g></g>
+      <rect x="2" y="138" width="76" height="24" fill="#000" stroke="yellow" />
+      <text id="asi_value" x="40" y="156" fill="yellow" text-anchor="middle" font-size="14">0</text>
+      <text x="40" y="14" fill="#888" text-anchor="middle" font-size="10">KTS</text>
+    </svg>
+
+    <!-- attitude indicator -->
+    <svg id="ai" class="gauge" width="300" height="300">
+      <clipPath id="ai_clip"><circle cx="150" cy="150" r="120" /></clipPath>
+      <g clip-path="url(#ai_clip)">
+        <g id="ai_ball" transform="rotate(0 150 150)">
+          <g id="ai_pitch" transform="translate(0 0)">
+            <rect x="-300" y="-300" width="900" height="450" fill="#3a7bd5" />
+            <rect x="-300" y="150" width="900" height="450" fill="#7a5230" />
+            <line x1="-300" y1="150" x2="600" y2="150" stroke="#fff" stroke-width="2" />
+            <line x1="120" y1="110" x2="180" y2="110" stroke="#fff" />
+            <line x1="120" y1="190" x2="180" y2="190" stroke="#fff" />
+            <line x1="130" y1="70" x2="170" y2="70" stroke="#fff" />
+            <line x1="130" y1="230" x2="170" y2="230" stroke="#fff" />
+          </g>
+        </g>
+      </g>
+      <!-- fixed aircraft symbol -->
+      <line x1="100" y1="150" x2="135" y2="150" stroke="yellow" stroke-width="3" />
+      <line x1="165" y1="150" x2="200" y2="150" stroke="yellow" stroke-width="3" />
+      <circle cx="150" cy="150" r="2" fill="yellow" />
+      <circle cx="150" cy="150" r="120" fill="none" stroke="#444" stroke-width="2" />
+      <text id="ai_status" x="150" y="245" fill="orange" text-anchor="middle" font-size="13"></text>
+    </svg>
+
+    <!-- altitude tape -->
+    <svg id="alt" class="gauge" width="90" height="300">
+      <clipPath id="alt_clip"><rect x="0" y="0" width="90" height="300" /></clipPath>
+      <g clip-path="url(#alt_clip)"><g id="alt_scale"></g></g>
+      <rect x="2" y="138" width="86" height="24" fill="#000" stroke="yellow" />
+      <text id="alt_value" x="45" y="156" fill="yellow" text-anchor="middle" font-size="13">0</text>
+      <text x="45" y="14" fill="#888" text-anchor="middle" font-size="10">ALT ft</text>
+    </svg>
+
+    <!-- vertical speed -->
+    <svg id="vsi" class="gauge" width="70" height="300">
+      <line x1="10" y1="30" x2="10" y2="270" stroke="#444" />
+      <g id="vsi_ticks"></g>
+      <line x1="4" y1="150" x2="30" y2="150" stroke="#888" />
+      <line id="vsi_ptr" x1="10" y1="150" x2="42" y2="150" stroke="lime" stroke-width="3" />
+      <text x="35" y="14" fill="#888" text-anchor="middle" font-size="10">VS</text>
+      <text id="vsi_value" x="35" y="288" fill="lime" text-anchor="middle" font-size="10">0</text>
+    </svg>
+
+  </div>
+
+  <!-- heading tape -->
+  <svg id="hdg" class="gauge" width="600" height="60">
+    <clipPath id="hdg_clip"><rect x="0" y="0" width="600" height="60" /></clipPath>
+    <g clip-path="url(#hdg_clip)"><g id="hdg_scale"></g></g>
+    <polygon points="300,0 294,10 306,10" fill="yellow" />
+    <line x1="300" y1="0" x2="300" y2="40" stroke="yellow" />
+    <rect x="278" y="42" width="44" height="16" fill="#000" stroke="yellow" />
+    <text id="hdg_value" x="300" y="55" fill="yellow" text-anchor="middle" font-size="12">000</text>
   </svg>
-  <svg width="200" height="200"> //A svg is a container with its own coordinate system.
-    <circle cx="100" cy="100" r="80" stroke="black" fill="none" />
-    <line id = "altitude_needle" x1="100" y1="100" x2="100" y2="30" stroke="red" stroke-width="3" transform="rotate(45 100 100)"/>
-  </svg>
 
-
- 
-
-
-
-
-
-
-
+  <div id="data">
+    <p>Speed: <span id="d_speed">----</span></p>
+    <p>Altitude: <span id="d_alt">----</span></p>
+    <p>Vertical Speed: <span id="d_vs">----</span></p>
+    <p>Heading: <span id="d_hdg">----</span></p>
+    <p>Roll: <span id="d_roll">----</span></p>
+    <p>Pitch: <span id="d_pitch">----</span></p>
+    <p>Temp: <span id="d_temp">----</span></p>
+    <p>Humidity: <span id="d_hum">----</span></p>
+    <p>Pressure: <span id="d_press">----</span></p>
+    <p>Gas: <span id="d_gas">----</span></p>
+    <p>Satellites: <span id="d_sats">----</span></p>
+    <p>HDOP: <span id="d_hdop">----</span></p>
+    <p>Fix: <span id="d_fix">----</span></p>
+    <p>Position: <span id="d_pos">----</span></p>
+    <p>UTC: <span id="d_utc">----</span></p>
+  </div>
 
   <script>
     const socket = new WebSocket("ws://10.42.0.1:8080");
     socket.onopen = () => console.log("connected");
-    const heading_needle = document.getElementById("heading_needle");
-    const altitude_needle = document.getElementById("altitude_needle");
-    const min_value = 0;
-    const max_value = 400;
-    const min_angle = -120;
-    const max_angle = 120;
-    let calculated_altitude = 0;
-    let altitude = 0;
-    let diff = 0;
-    let new_heading = 0;
-    let last_heading = 0;
-    let acumulated_diff = 0;
+
+    const ns = "http://www.w3.org/2000/svg";
+    const ai = document.getElementById("ai");
+    const asi = document.getElementById("asi");
+    const altSvg = document.getElementById("alt");
+    const vsiSvg = document.getElementById("vsi");
+    const hdg = document.getElementById("hdg");
+    const aiBall = document.getElementById("ai_ball");
+    const aiPitch = document.getElementById("ai_pitch");
+    const aiStatus = document.getElementById("ai_status");
+    const asiScale = document.getElementById("asi_scale");
+    const altScale = document.getElementById("alt_scale");
+    const hdgScale = document.getElementById("hdg_scale");
+    const vsiPtr = document.getElementById("vsi_ptr");
+
+    // how much the tapes move per unit
+    const KT_PX = 2;      // airspeed px per knot
+    const FT_PX = 0.05;   // altitude px per foot
+    const DEG_PX = 3;     // heading px per degree
+    const PITCH_PX = 3;   // attitude px per degree of pitch
+    const VS_PX = 0.05;   // vsi px per ft/min
+
+    // latest values
+    let speed = 0, altitude = 0, heading = 0, roll = 0, pitch = 0, vspeed = 0;
+    let temp = 0, hum = 0, press = 0, gas = 0;
+    let sats = 0, hdop = 0, fix = 0, lat = "", latDir = "", lon = "", lonDir = "", utc = { hour: 0, minute: 0, sec: 0 };
+
+    // freshness tracking
+    let haveMpu = false, haveGps = false, haveCompass = false, haveBme = false;
+    let tMpu = 0, tGps = 0, tCompass = 0;
+    let lastAlt = 0, lastAltT = 0, gpsKey = "";
     let gpsTimeCheck = { hour: 0, minute: 0, sec: 0 };
+
+    // build the tick marks once
+    function line(parent, x1, y1, x2, y2) {
+      const l = document.createElementNS(ns, "line");
+      l.setAttribute("x1", x1); l.setAttribute("y1", y1);
+      l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+      l.setAttribute("stroke", "#aaa");
+      parent.appendChild(l);
+    }
+    function label(parent, x, y, anchor, txt) {
+      const t = document.createElementNS(ns, "text");
+      t.setAttribute("x", x); t.setAttribute("y", y);
+      t.setAttribute("fill", "#aaa"); t.setAttribute("font-size", "10");
+      t.setAttribute("text-anchor", anchor);
+      t.textContent = txt;
+      parent.appendChild(t);
+    }
+
+    for (let k = 0; k <= 200; k += 10) {
+      const y = -k * KT_PX;
+      line(asiScale, k % 20 === 0 ? 44 : 54, y, 72, y);
+      if (k % 20 === 0) label(asiScale, 40, y + 4, "end", k);
+    }
+    for (let f = 0; f <= 15000; f += 100) {
+      const y = -f * FT_PX;
+      line(altScale, 18, y, f % 500 === 0 ? 40 : 30, y);
+      if (f % 500 === 0) label(altScale, 44, y + 4, "start", f);
+    }
+    const compass = { 0: "N", 90: "E", 180: "S", 270: "W" };
+    for (let d = -120; d <= 480; d += 10) {
+      const x = d * DEG_PX;
+      const dd = ((d % 360) + 360) % 360;
+      line(hdgScale, x, 12, x, dd % 30 === 0 ? 34 : 24);
+      if (dd % 30 === 0) label(hdgScale, x, 48, "middle", compass[dd] || dd / 10);
+    }
+    [-2000, -1000, 1000, 2000].forEach(v => {
+      const y = 150 - v * VS_PX;
+      line(document.getElementById("vsi_ticks"), 10, y, 26, y);
+      label(document.getElementById("vsi_ticks"), 30, y + 4, "start", Math.abs(v) / 1000);
+    });
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function set(id, ok, txt) { document.getElementById(id).textContent = ok ? txt : "----"; }
+
+    // redraw everything from the latest values + freshness
+    function render() {
+      const now = Date.now();
+      const mpuStale = !haveMpu || now - tMpu > 1500;
+      const gpsStale = !haveGps || now - tGps > 3000;
+      const compassStale = !haveCompass || now - tCompass > 1500;
+
+      // attitude
+      if (!haveMpu) {
+        aiBall.setAttribute("transform", "rotate(0 150 150)");
+        aiPitch.setAttribute("transform", "translate(0 0)");
+        aiStatus.textContent = "NO DATA";
+        ai.classList.add("stale");
+      } else {
+        aiBall.setAttribute("transform", `rotate(${-roll} 150 150)`);
+        aiPitch.setAttribute("transform", `translate(0 ${pitch * PITCH_PX})`);
+        aiStatus.textContent = mpuStale ? "STALE" : "";
+        ai.classList.toggle("stale", mpuStale);
+      }
+
+      // airspeed tape
+      asiScale.setAttribute("transform", `translate(0 ${speed * KT_PX + 150})`);
+      set("asi_value", haveGps, Math.round(speed));
+      asi.classList.toggle("stale", gpsStale);
+
+      // altitude tape
+      altScale.setAttribute("transform", `translate(0 ${altitude * FT_PX + 150})`);
+      set("alt_value", haveGps, Math.round(altitude));
+      altSvg.classList.toggle("stale", gpsStale);
+
+      // vertical speed
+      const v = Math.max(-2000, Math.min(2000, vspeed));
+      vsiPtr.setAttribute("y1", 150 - v * VS_PX);
+      vsiPtr.setAttribute("y2", 150 - v * VS_PX);
+      set("vsi_value", haveGps, Math.round(vspeed / 10) * 10);
+      vsiSvg.classList.toggle("stale", gpsStale);
+
+      // heading tape
+      const h = ((heading % 360) + 360) % 360;
+      hdgScale.setAttribute("transform", `translate(${300 - h * DEG_PX} 0)`);
+      set("hdg_value", haveCompass, String(Math.round(h) % 360).padStart(3, "0"));
+      hdg.classList.toggle("stale", compassStale);
+
+      // data list
+      set("d_speed", haveGps, Math.round(speed) + " kt");
+      set("d_alt", haveGps, Math.round(altitude) + " ft");
+      set("d_vs", haveGps, (Math.round(vspeed / 10) * 10) + " fpm");
+      set("d_hdg", haveCompass, Math.round(h) + " deg");
+      set("d_roll", haveMpu, roll.toFixed(1) + " deg");
+      set("d_pitch", haveMpu, pitch.toFixed(1) + " deg");
+      set("d_temp", haveBme, temp.toFixed(1) + " C");
+      set("d_hum", haveBme, hum.toFixed(0) + " %");
+      set("d_press", haveBme, press.toFixed(1) + " hPa");
+      set("d_gas", haveBme, (gas / 1000).toFixed(1) + " kOhm");
+      set("d_sats", haveGps, sats);
+      set("d_hdop", haveGps, hdop);
+      set("d_fix", haveGps, fix);
+      set("d_pos", haveGps, lat + latDir + " " + lon + lonDir);
+      set("d_utc", haveGps, pad(utc.hour) + ":" + pad(utc.minute) + ":" + pad(utc.sec));
+    }
+    setInterval(render, 100);
+
     socket.onmessage = (event) => {
       console.log(event.data);
       function isValidJSON(str) {
@@ -66,9 +266,34 @@
       }
       else {
         console.log("Received valid JSON data.");
-        altitude = jsonObject.gps.altitude;
-        calculated_altitude = ((altitude - min_value) / (max_value - min_value)) * (max_angle - min_angle) + min_angle;
-        new_heading = jsonObject.compass.headingDegrees;
+
+        // pull the numbers the gauges need
+        if (jsonObject.gps) {
+          speed = jsonObject.gps.speedKnots;
+          altitude = jsonObject.gps.altitude;
+          sats = jsonObject.gps.satCount;
+          hdop = jsonObject.gps.hdop;
+          fix = jsonObject.gps.fixQual;
+          lat = jsonObject.gps.lat; latDir = jsonObject.gps.latDir;
+          lon = jsonObject.gps.lon; lonDir = jsonObject.gps.lonDir;
+          utc = jsonObject.gps.time;
+
+          const noFix = utc.hour === 0 && utc.minute === 0 && utc.sec === 0;
+          const key = utc.hour + ":" + utc.minute + ":" + utc.sec;
+          if (!noFix) {
+            haveGps = true;
+            if (key !== gpsKey) { gpsKey = key; tGps = Date.now(); }
+          }
+
+          // vertical speed = how fast altitude is changing
+          const t = Date.now();
+          if (lastAltT === 0) { lastAlt = altitude; lastAltT = t; }
+          else if (t - lastAltT > 500) {
+            vspeed = (altitude - lastAlt) / ((t - lastAltT) / 60000);
+            lastAlt = altitude;
+            lastAltT = t;
+          }
+        }
 
         if (!jsonObject.mpu.valid) {
           console.log("!!!MPU Reading Not Valid!!! " + jsonObject.mpu.accelX);
@@ -91,6 +316,10 @@
           console.log("Gyro Y: " + jsonObject.mpu.gyroY);
           console.log("Gyro Z: " + jsonObject.mpu.gyroZ);
           console.log("Valid: " + jsonObject.mpu.valid);
+          roll = jsonObject.mpu.roll;
+          pitch = jsonObject.mpu.pitch;
+          haveMpu = true;
+          tMpu = Date.now();
         }
 
         if (!jsonObject.bme.valid) {
@@ -107,6 +336,11 @@
           console.log("Pressure: " + jsonObject.bme.pressure);
           console.log("Gas Resistance: " + jsonObject.bme.gasResistance);
           console.log("Valid: " + jsonObject.bme.valid);
+          temp = jsonObject.bme.temperature;
+          hum = jsonObject.bme.humidity;
+          press = jsonObject.bme.pressure;
+          gas = jsonObject.bme.gasResistance;
+          haveBme = true;
         }
 
         if (!jsonObject.compass.valid) {
@@ -123,6 +357,9 @@
           console.log("Raw Y: " + jsonObject.compass.rawY);
           console.log("Raw Z: " + jsonObject.compass.rawZ);
           console.log("Valid: " + jsonObject.compass.valid);
+          heading = jsonObject.compass.headingDegrees;
+          haveCompass = true;
+          tCompass = Date.now();
         }
 
         if (jsonObject.gps.time.hour === 0 && jsonObject.gps.time.minute === 0 && jsonObject.gps.time.sec === 0) {
@@ -145,7 +382,7 @@
           console.log("Altitude: " + jsonObject.gps.altitude);
           console.log("Speed (MPH): " + jsonObject.gps.speedKnots * 1.15078);
           console.log("Time: " + jsonObject.gps.time.hour + ":" + jsonObject.gps.time.minute + ":" + jsonObject.gps.time.sec);
-        } else {  ///need to check if its stale and indicate if it stale and if so display last known location. 
+        } else {  ///need to check if its stale and indicate if it stale and if so display last known location.
           console.log("--- GPS ---");
           console.log("Lat: " + jsonObject.gps.lat + " " + jsonObject.gps.latDir);
           console.log("Lon: " + jsonObject.gps.lon + " " + jsonObject.gps.lonDir);
@@ -158,22 +395,7 @@
           gpsTimeCheck = jsonObject.gps.time;
         }
         console.log("");
-
-        diff = new_heading - last_heading;
-        if(diff > 180){
-          diff -= 360;
-        }
-        if(diff < -180){
-          diff += 360;
-        }
-        last_heading = new_heading;
-        acumulated_diff += diff;
-        
       }
-    
-    
-      heading_needle.setAttribute("transform", `rotate(${acumulated_diff},100,100)`);
-      altitude_needle.setAttribute("transform", `rotate(${calculated_altitude},100,100)`);
     }
   </script>
 </body>
