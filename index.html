@@ -68,7 +68,7 @@
         console.log("Received valid JSON data.");
         altitude = jsonObject.gps.altitude;
         calculated_altitude = ((altitude - min_value) / (max_value - min_value)) * (max_angle - min_angle) + min_angle;
-        new_heading = jsonObject.comp.headingDegrees;
+        new_heading = jsonObject.compass.headingDegrees;
 
         if (!jsonObject.mpu.valid) {
           console.log("!!!MPU Reading Not Valid!!! " + jsonObject.mpu.accelX);
@@ -109,7 +109,7 @@
           console.log("Valid: " + jsonObject.bme.valid);
         }
 
-        if (!jsonObject.comp.valid) {
+        if (!jsonObject.compass.valid) {
           console.log("!!!!Compass Reading Not Valid!!!!");
           console.log("Heading Degrees: " + "--------------------");
           console.log("Raw X: " + "--------------------");
@@ -118,11 +118,11 @@
           console.log("Valid: " + "--------------------");
         } else {
           console.log("--- Compass ---");
-          console.log("Heading Degrees: " + jsonObject.comp.headingDegrees);
-          console.log("Raw X: " + jsonObject.comp.rawX);
-          console.log("Raw Y: " + jsonObject.comp.rawY);
-          console.log("Raw Z: " + jsonObject.comp.rawZ);
-          console.log("Valid: " + jsonObject.comp.valid);
+          console.log("Heading Degrees: " + jsonObject.compass.headingDegrees);
+          console.log("Raw X: " + jsonObject.compass.rawX);
+          console.log("Raw Y: " + jsonObject.compass.rawY);
+          console.log("Raw Z: " + jsonObject.compass.rawZ);
+          console.log("Valid: " + jsonObject.compass.valid);
         }
 
         if (jsonObject.gps.time.hour === 0 && jsonObject.gps.time.minute === 0 && jsonObject.gps.time.sec === 0) {
