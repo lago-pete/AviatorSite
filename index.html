@@ -10,8 +10,13 @@
   <div id="dashboard"></div>
   <svg width="200" height="200"> //A svg is a container with its own coordinate system.
     <circle cx="100" cy="100" r="80" stroke="black" fill="none" />
-    <line x1="100" y1="100" x2="100" y2="30" stroke="red" stroke-width="3" transform="rotate(45 100 100)"/>
+    <line id = "heading_needle" x1="100" y1="100" x2="100" y2="30" stroke="red" stroke-width="3" transform="rotate(45 100 100)"/>
   </svg>
+  <svg width="200" height="200"> //A svg is a container with its own coordinate system.
+    <circle cx="100" cy="100" r="80" stroke="black" fill="none" />
+    <line id = "altitude_needle" x1="100" y1="100" x2="100" y2="30" stroke="red" stroke-width="3" transform="rotate(45 100 100)"/>
+  </svg>
+
 
  
 
@@ -25,10 +30,18 @@
   <script>
     const socket = new WebSocket("ws://10.42.0.1:8080");
     socket.onopen = () => console.log("connected");
-    const needle = document.querySelector("line");
+    const heading_needle = document.getElementById("heading_needle");
+    const altitude_needle = document.getElementById("altitude_needle");
+    const min_value = 0;
+    const max_value = 400;
+    const min_angle = -120;
+    const max_angle = 120;
+    let calculated_altitude = 0;
+    let altitude = 0;
     let diff = 0;
     let new_heading = 0;
     let last_heading = 0;
+    let acumulated_diff = 0;
     let gpsTimeCheck = { hour: 0, minute: 0, sec: 0 };
     socket.onmessage = (event) => {
       console.log(event.data);
@@ -53,7 +66,10 @@
       }
       else {
         console.log("Received valid JSON data.");
+        altitude = jsonObject.gps.altitude;
+        calculated_altitude = ((altitude - min_value) / (max_value - min_value)) * (max_angle - min_angle) + min_angle;
         new_heading = jsonObject.comp.headingDegrees;
+
         if (!jsonObject.mpu.valid) {
           console.log("!!!MPU Reading Not Valid!!! " + jsonObject.mpu.accelX);
           console.log("--- MPU ---");
@@ -117,6 +133,7 @@
           console.log("Sat Count: " + "--------------------");
           console.log("HDOP: " + "--------------------");
           console.log("Altitude: " + "--------------------");
+          console.log("Speed (MPH): " + "--------------------");
           console.log("Time: " + jsonObject.gps.time.hour + ":" + jsonObject.gps.time.minute + ":" + jsonObject.gps.time.sec);
         } else if (gpsTimeCheck.hour === jsonObject.gps.time.hour && gpsTimeCheck.minute === jsonObject.gps.time.minute && gpsTimeCheck.sec === jsonObject.gps.time.sec) {
           console.log("!!!!Last Known GPS Reading!!!!");
@@ -126,6 +143,7 @@
           console.log("Sat Count: " + jsonObject.gps.satCount);
           console.log("HDOP: " + jsonObject.gps.hdop);
           console.log("Altitude: " + jsonObject.gps.altitude);
+          console.log("Speed (MPH): " + jsonObject.gps.speedKnots * 1.15078);
           console.log("Time: " + jsonObject.gps.time.hour + ":" + jsonObject.gps.time.minute + ":" + jsonObject.gps.time.sec);
         } else {  ///need to check if its stale and indicate if it stale and if so display last known location. 
           console.log("--- GPS ---");
@@ -135,6 +153,7 @@
           console.log("Sat Count: " + jsonObject.gps.satCount);
           console.log("HDOP: " + jsonObject.gps.hdop);
           console.log("Altitude: " + jsonObject.gps.altitude);
+          console.log("Speed (MPH): " + jsonObject.gps.speedKnots * 1.15078);
           console.log("Time: " + jsonObject.gps.time.hour + ":" + jsonObject.gps.time.minute + ":" + jsonObject.gps.time.sec);
           gpsTimeCheck = jsonObject.gps.time;
         }
@@ -147,13 +166,15 @@
         if(diff < -180){
           diff += 360;
         }
-        last_heading = diff;
+        last_heading = new_heading;
+        acumulated_diff += diff;
         
       }
     
     
-    needle.setAttribute("transform", `rotate(${last_heading},100,100)`);
-    };
+      heading_needle.setAttribute("transform", `rotate(${acumulated_diff},100,100)`);
+      altitude_needle.setAttribute("transform", `rotate(${calculated_altitude},100,100)`);
+    }
   </script>
 </body>
 
