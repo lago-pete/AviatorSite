@@ -145,7 +145,12 @@
             console.log("Gyro Y: " + jsonObject.mpu.gyroY);
             console.log("Gyro Z: " + jsonObject.mpu.gyroZ);
             console.log("Valid: " + jsonObject.mpu.valid);
-            updateAttitude(jsonObject.mpu.roll, jsonObject.mpu.pitch);
+            if(jsonObject.mpu.attitudeReady === false){
+              console.log("!!!!MPU Attitude Not Ready!!!!");
+            } else {
+              updateAttitude(jsonObject.mpu.roll, jsonObject.mpu.pitch);
+            }
+            
           }
 
           if (!jsonObject.bme.valid) {
