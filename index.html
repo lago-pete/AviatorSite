@@ -19,7 +19,9 @@
 
   <style>
     /* ---------- overall dark "cockpit" look ---------- */
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
@@ -60,7 +62,9 @@
       gap: 10px;
     }
 
-    .gauge { text-align: center; }
+    .gauge {
+      text-align: center;
+    }
 
     .gauge h2,
     .attitude-col h2,
@@ -79,6 +83,7 @@
       line-height: 1.1;
       margin-top: 4px;
     }
+
     .readout .unit {
       display: block;
       font-size: 11px;
@@ -86,11 +91,23 @@
       color: #8a94a0;
       font-weight: normal;
     }
+
     /* number colors, roughly matching the reference image */
-    #speed_val { color: #46d160; }
-    #alt_val   { color: #4aa3df; }
-    #hdg_val   { color: #e0483a; }
-    .att-num   { color: #46d160; }
+    #speed_val {
+      color: #46d160;
+    }
+
+    #alt_val {
+      color: #4aa3df;
+    }
+
+    #hdg_val {
+      color: #e0483a;
+    }
+
+    .att-num {
+      color: #46d160;
+    }
 
     /* ---------- attitude panel (roll tape | ball | pitch tape) ---------- */
     #attitude {
@@ -101,8 +118,16 @@
       min-height: 0;
       height: 100%;
     }
-    .attitude-col { text-align: center; }
-    .att-num { font-size: 22px; font-weight: bold; margin-top: 4px; }
+
+    .attitude-col {
+      text-align: center;
+    }
+
+    .att-num {
+      font-size: 22px;
+      font-weight: bold;
+      margin-top: 4px;
+    }
 
     /* let the horizon ball ease between packets instead of snapping */
     #attitude_ball,
@@ -122,7 +147,12 @@
       gap: 6px;
       min-height: 0;
     }
-    #map-title { color: #46d160; letter-spacing: 3px; }
+
+    #map-title {
+      color: #46d160;
+      letter-spacing: 3px;
+    }
+
     #map {
       width: 100%;
       height: 100%;
@@ -147,8 +177,8 @@
           <svg id="speed_svg" viewBox="0 0 200 200" width="100%">
             <circle cx="100" cy="100" r="90" fill="#0d0d0d" stroke="#2a2a2a" stroke-width="2" />
             <!-- tick marks + labels are drawn by buildDial() in JS -->
-            <line id="speed_needle" x1="100" y1="100" x2="100" y2="25"
-              stroke="#ffffff" stroke-width="3" transform="rotate(-135 100 100)" />
+            <line id="speed_needle" x1="100" y1="100" x2="100" y2="25" stroke="#ffffff" stroke-width="3"
+              transform="rotate(-135 100 100)" />
             <circle cx="100" cy="100" r="5" fill="#ffffff" />
           </svg>
           <div class="readout"><span id="speed_val">0</span><span class="unit">KTS</span></div>
@@ -159,8 +189,8 @@
           <h2>ALTITUDE</h2>
           <svg id="altitude_svg" viewBox="0 0 200 200" width="100%">
             <circle cx="100" cy="100" r="90" fill="#0d0d0d" stroke="#2a2a2a" stroke-width="2" />
-            <line id="altitude_needle" x1="100" y1="100" x2="100" y2="25"
-              stroke="#ffffff" stroke-width="3" transform="rotate(0 100 100)" />
+            <line id="altitude_needle" x1="100" y1="100" x2="100" y2="25" stroke="#ffffff" stroke-width="3"
+              transform="rotate(0 100 100)" />
             <circle cx="100" cy="100" r="5" fill="#ffffff" />
           </svg>
           <div class="readout"><span id="alt_val">0</span><span class="unit">FT</span></div>
@@ -175,8 +205,8 @@
             <text x="176" y="105" fill="#8a94a0" font-size="12" text-anchor="middle">E</text>
             <text x="100" y="182" fill="#8a94a0" font-size="12" text-anchor="middle">S</text>
             <text x="24" y="105" fill="#8a94a0" font-size="12" text-anchor="middle">W</text>
-            <line id="heading_needle" x1="100" y1="100" x2="100" y2="25"
-              stroke="#e0483a" stroke-width="3" transform="rotate(0 100 100)" />
+            <line id="heading_needle" x1="100" y1="100" x2="100" y2="25" stroke="#e0483a" stroke-width="3"
+              transform="rotate(0 100 100)" />
             <circle cx="100" cy="100" r="5" fill="#ffffff" />
           </svg>
           <div class="readout"><span id="hdg_val">000&deg;</span><span class="unit">HDG</span></div>
@@ -310,7 +340,7 @@
       minZoom: 10,
       maxZoom: 15,
       errorTileUrl: BLANK_TILE,
-      attribution: "&copy; OpenStreetMap"
+      attribution: "&copy; <a href=\"https://www.maptiler.com/copyright/\" target=\"_blank\">MapTiler</a> &copy; OpenStreetMap contributors"
     }).addTo(map);
 
     // the plane marker is just a rotating airplane glyph in a div.
@@ -318,7 +348,7 @@
     const planeIcon = L.divIcon({
       className: "",
       html: '<div id="plane_glyph" style="font-size:26px;line-height:26px;' +
-            'text-shadow:0 0 3px #000;transform:rotate(0deg);">&#9992;&#65039;</div>',
+        'text-shadow:0 0 3px #000;transform:rotate(0deg);">&#9992;&#65039;</div>',
       iconSize: [26, 26],
       iconAnchor: [13, 13]
     });
