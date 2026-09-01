@@ -326,7 +326,7 @@
 
     // start centered on Chandler, AZ; it will recenter on the
     // first real GPS fix anyway
-    const map = L.map("map", { zoomControl: true }).setView([33.3062, -111.8413], 12);
+    const map = L.map("map", { zoomControl: true }).setView([33.3131418, -111.8901676], 15);
 
     // a 1x1 transparent PNG - shown for any tile that wasn't downloaded,
     // so gaps in the offline cache look clean instead of "broken image"
@@ -338,7 +338,7 @@
     // otherwise Leaflet asks for tiles that don't exist.
     L.tileLayer("tiles/{z}/{x}/{y}.png", {
       minZoom: 10,
-      maxZoom: 15,
+      maxZoom: 20,
       errorTileUrl: BLANK_TILE,
       attribution: "&copy; <a href=\"https://www.maptiler.com/copyright/\" target=\"_blank\">MapTiler</a> &copy; OpenStreetMap contributors"
     }).addTo(map);
@@ -380,8 +380,9 @@
       const glyph = document.getElementById("plane_glyph");
       if (glyph) glyph.style.transform = "rotate(" + (headingDeg - 45) + "deg)";
 
-      // 15 = deepest zoom the offline cache has (see tileLayer maxZoom)
-      if (!mapCentered) { map.setView(pt, 15); mapCentered = true; }
+
+      // 20 = deepest zoom the offline cache has (see tileLayer maxZoom)
+      if (!mapCentered) { map.setView(pt, 20); mapCentered = true; }
       else { map.panTo(pt); }
     }
 

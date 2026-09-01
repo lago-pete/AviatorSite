@@ -20,16 +20,16 @@ set -euo pipefail
 
 # ---- bounding box of the area you want map coverage for (degrees) ----
 #      defaults cover the city of Chandler, AZ (plus a little margin)
-LAT_MIN="${LAT_MIN:-33.15}"
-LAT_MAX="${LAT_MAX:-33.45}"
-LON_MIN="${LON_MIN:--112.02}"
-LON_MAX="${LON_MAX:--111.72}"
+LAT_MIN="${LAT_MIN:-33.2986}"
+LAT_MAX="${LAT_MAX:-33.3276}"
+LON_MIN="${LON_MIN:--111.9075}"
+LON_MAX="${LON_MAX:--111.8728}"
 
 # ---- zoom levels to cache ----
 #      MUST match minZoom / maxZoom in index.html's tileLayer(...).
 #      Each extra zoom level roughly 4x's the tile count & download time.
 ZOOM_MIN="${ZOOM_MIN:-10}"
-ZOOM_MAX="${ZOOM_MAX:-15}"
+ZOOM_MAX="${ZOOM_MAX:-20}"
 
 # free tile servers want a real, identifiable User-Agent
 UA="AviatorSite-offline-setup/1.0 (personal offline flight dashboard)"
