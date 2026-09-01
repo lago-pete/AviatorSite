@@ -36,7 +36,7 @@ UA="AviatorSite-offline-setup/1.0 (personal offline flight dashboard)"
 
 # MapTiler API key - free tier, explicitly permits offline/cached tile use
 # (unlike tile.openstreetmap.org, which blocked this exact bulk-download pattern)
-MAPTILER_KEY=
+MAPTILER_KEY="1M5tYuPCnSkU4K7WidLr"
 
 # ---------------------------------------------------------------------
 # 1. Leaflet library
