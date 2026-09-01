@@ -3,64 +3,374 @@
 
 <head>
   <title>Flight Dashboard</title>
+
+  <!-- ============================================================= -->
+  <!-- LEAFLET (the map library) - loaded from LOCAL files so this   -->
+  <!-- page works with NO internet.                                  -->
+  <!--                                                               -->
+  <!-- Before first use, run  setup-offline.ps1  once while online.  -->
+  <!-- That downloads:                                               -->
+  <!--   ./lib/leaflet.js  ./lib/leaflet.css   (the library)         -->
+  <!--   ./tiles/{z}/{x}/{y}.png               (the map images)      -->
+  <!-- After that, everything below runs offline.                    -->
+  <!-- ============================================================= -->
+  <link rel="stylesheet" href="lib/leaflet.css" />
+  <script src="lib/leaflet.js"></script>
+
   <style>
+    /* ---------- overall dark "cockpit" look ---------- */
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 10px;
+      background: #0a0a0a;
+      color: #e8e8e8;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    /* the whole screen: gauges on the left, map on the right */
+    #wrap {
+      display: grid;
+      grid-template-columns: minmax(480px, 42%) 1fr;
+      gap: 10px;
+      height: calc(100vh - 20px);
+    }
+
+    /* left side stacks: gauges row on top, attitude panel below */
+    #left {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    /* a "panel" is one of the black bordered boxes */
+    .panel {
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    /* the 3 small gauges (speed / altitude / heading) sit in a row */
+    #gauges {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .gauge { text-align: center; }
+
+    .gauge h2,
+    .attitude-col h2,
+    #map-title {
+      margin: 0 0 6px;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #8a94a0;
+    }
+
+    /* the big number under each gauge */
+    .readout {
+      font-size: 30px;
+      font-weight: bold;
+      line-height: 1.1;
+      margin-top: 4px;
+    }
+    .readout .unit {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #8a94a0;
+      font-weight: normal;
+    }
+    /* number colors, roughly matching the reference image */
+    #speed_val { color: #46d160; }
+    #alt_val   { color: #4aa3df; }
+    #hdg_val   { color: #e0483a; }
+    .att-num   { color: #46d160; }
+
+    /* ---------- attitude panel (roll tape | ball | pitch tape) ---------- */
+    #attitude {
+      display: grid;
+      grid-template-columns: 70px 1fr 70px;
+      align-items: center;
+      gap: 6px;
+      min-height: 0;
+      height: 100%;
+    }
+    .attitude-col { text-align: center; }
+    .att-num { font-size: 22px; font-weight: bold; margin-top: 4px; }
+
     /* let the horizon ball ease between packets instead of snapping */
     #attitude_ball,
-    #attitude_pitch {
-      transition: transform 0.1s linear;
+    #attitude_pitch,
+    #roll_marker,
+    #pitch_marker,
+    #speed_needle,
+    #heading_needle,
+    #altitude_needle {
+      transition: transform 0.12s linear;
+    }
+
+    /* ---------- map ---------- */
+    #map-panel {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 6px;
+      min-height: 0;
+    }
+    #map-title { color: #46d160; letter-spacing: 3px; }
+    #map {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      background: #1a1a1a;
     }
   </style>
 </head>
 
 <body>
-  <h1>Dashboard test</h1>
-  <div id="dashboard"></div>
-  <svg width="200" height="200">
-    <circle cx="100" cy="100" r="80" stroke="black" fill="none" />
-    <line id="heading_needle" x1="100" y1="100" x2="100" y2="30" stroke="red" stroke-width="3"
-      transform="rotate(45 100 100)" />
-  </svg>
-  <svg width="200" height="200">
-    <circle cx="100" cy="100" r="80" stroke="black" fill="none" />
-    <line id="altitude_needle" x1="100" y1="100" x2="100" y2="30" stroke="red" stroke-width="3"
-      transform="rotate(45 100 100)" />
-  </svg>
+  <div id="wrap">
 
+    <!-- ================= LEFT: GAUGES + ATTITUDE ================= -->
+    <div id="left">
 
+      <!-- --- top row: three small gauges --- -->
+      <div id="gauges" class="panel">
 
+        <!-- SPEED -->
+        <div class="gauge">
+          <h2>SPEED</h2>
+          <svg id="speed_svg" viewBox="0 0 200 200" width="100%">
+            <circle cx="100" cy="100" r="90" fill="#0d0d0d" stroke="#2a2a2a" stroke-width="2" />
+            <!-- tick marks + labels are drawn by buildDial() in JS -->
+            <line id="speed_needle" x1="100" y1="100" x2="100" y2="25"
+              stroke="#ffffff" stroke-width="3" transform="rotate(-135 100 100)" />
+            <circle cx="100" cy="100" r="5" fill="#ffffff" />
+          </svg>
+          <div class="readout"><span id="speed_val">0</span><span class="unit">KTS</span></div>
+        </div>
 
-  <svg width="200" height="200">
-    <defs>
-      <clipPath id="attitude_window">
-        <circle cx="100" cy="100" r="80" />
-      </clipPath>
-    </defs>
-    <g clip-path="url(#attitude_window)">
-      <g id="attitude_ball" transform="rotate(0,100,100)">
-        <g id="attitude_pitch" transform="translate(0,0)">
-          <rect x="-200" y="-200" width="600" height="300" fill="#4aa3df" />
-          <rect x="-200" y="100" width="600" height="300" fill="#8a6240" />
-          <line x1="-200" y1="100" x2="400" y2="100" stroke="white" stroke-width="2" />
-        </g>
-      </g>
-    </g>
-    <line x1="70" y1="100" x2="130" y2="100" stroke="white" stroke-width="4" />
-    <circle cx="100" cy="100" r="3" fill="white" />
-    <circle cx="100" cy="100" r="80" stroke="black" fill="none" stroke-width="2" />
-  </svg>
+        <!-- ALTITUDE -->
+        <div class="gauge">
+          <h2>ALTITUDE</h2>
+          <svg id="altitude_svg" viewBox="0 0 200 200" width="100%">
+            <circle cx="100" cy="100" r="90" fill="#0d0d0d" stroke="#2a2a2a" stroke-width="2" />
+            <line id="altitude_needle" x1="100" y1="100" x2="100" y2="25"
+              stroke="#ffffff" stroke-width="3" transform="rotate(0 100 100)" />
+            <circle cx="100" cy="100" r="5" fill="#ffffff" />
+          </svg>
+          <div class="readout"><span id="alt_val">0</span><span class="unit">FT</span></div>
+        </div>
 
+        <!-- HEADING -->
+        <div class="gauge">
+          <h2>HEADING</h2>
+          <svg id="heading_svg" viewBox="0 0 200 200" width="100%">
+            <circle cx="100" cy="100" r="90" fill="#0d0d0d" stroke="#2a2a2a" stroke-width="2" />
+            <text x="100" y="30" fill="#c94" font-size="14" text-anchor="middle">N</text>
+            <text x="176" y="105" fill="#8a94a0" font-size="12" text-anchor="middle">E</text>
+            <text x="100" y="182" fill="#8a94a0" font-size="12" text-anchor="middle">S</text>
+            <text x="24" y="105" fill="#8a94a0" font-size="12" text-anchor="middle">W</text>
+            <line id="heading_needle" x1="100" y1="100" x2="100" y2="25"
+              stroke="#e0483a" stroke-width="3" transform="rotate(0 100 100)" />
+            <circle cx="100" cy="100" r="5" fill="#ffffff" />
+          </svg>
+          <div class="readout"><span id="hdg_val">000&deg;</span><span class="unit">HDG</span></div>
+        </div>
+      </div>
 
+      <!-- --- bottom: attitude / horizon panel --- -->
+      <div class="panel">
+        <div id="attitude">
+
+          <!-- ROLL tape (left) -->
+          <div class="attitude-col">
+            <h2>ROLL</h2>
+            <svg id="roll_svg" viewBox="0 0 60 300" width="100%" height="240">
+              <line x1="30" y1="10" x2="30" y2="290" stroke="#3a3a3a" stroke-width="2" />
+              <!-- ticks drawn by buildTape() -->
+              <path id="roll_marker" d="M40,150 L54,142 L54,158 Z" fill="#46d160" />
+            </svg>
+            <div class="att-num" id="roll_val">0&deg;</div>
+          </div>
+
+          <!-- attitude ball (center) -->
+          <svg id="attitude_svg" viewBox="0 0 200 200" width="100%">
+            <defs>
+              <clipPath id="attitude_window">
+                <circle cx="100" cy="100" r="90" />
+              </clipPath>
+            </defs>
+            <g clip-path="url(#attitude_window)">
+              <g id="attitude_ball" transform="rotate(0,100,100)">
+                <g id="attitude_pitch" transform="translate(0,0)">
+                  <rect x="-200" y="-200" width="600" height="300" fill="#4aa3df" />
+                  <rect x="-200" y="100" width="600" height="300" fill="#8a6240" />
+                  <line x1="-200" y1="100" x2="400" y2="100" stroke="white" stroke-width="2" />
+                </g>
+              </g>
+            </g>
+            <!-- fixed aircraft reference marker -->
+            <line x1="60" y1="100" x2="130" y2="100" stroke="#ffd11a" stroke-width="4" />
+            <circle cx="100" cy="100" r="3" fill="#ffd11a" />
+            <polygon points="100,18 92,32 108,32" fill="#ffd11a" />
+            <circle cx="100" cy="100" r="90" stroke="#2a2a2a" fill="none" stroke-width="2" />
+          </svg>
+
+          <!-- PITCH tape (right) -->
+          <div class="attitude-col">
+            <h2>PITCH</h2>
+            <svg id="pitch_svg" viewBox="0 0 60 300" width="100%" height="240">
+              <line x1="30" y1="10" x2="30" y2="290" stroke="#3a3a3a" stroke-width="2" />
+              <path id="pitch_marker" d="M20,150 L6,142 L6,158 Z" fill="#46d160" />
+            </svg>
+            <div class="att-num" id="pitch_val">0&deg;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= RIGHT: LIVE MAP ================= -->
+    <div id="map-panel" class="panel">
+      <div id="map-title">&#9679; LIVE MAP</div>
+      <div id="map"></div>
+    </div>
+
+  </div>
 
 
   <script>
+    /* =====================================================================
+       DIAL / TAPE DRAWING HELPERS  (run once at startup)
+       ===================================================================== */
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    // draw evenly spaced tick marks around a round gauge, sweeping the
+    // bottom 270 degrees (-135 deg on the left ... +135 deg on the right)
+    function buildDial(svg, count) {
+      const cx = 100, cy = 100, r = 90;
+      for (let i = 0; i <= count; i++) {
+        const deg = -135 + (270 / count) * i;
+        const a = deg * Math.PI / 180;
+        const inner = (i % 2 === 0) ? r - 14 : r - 8;   // long tick every 2nd
+        const ln = document.createElementNS(SVG_NS, "line");
+        ln.setAttribute("x1", cx + Math.sin(a) * inner);
+        ln.setAttribute("y1", cy - Math.cos(a) * inner);
+        ln.setAttribute("x2", cx + Math.sin(a) * r);
+        ln.setAttribute("y2", cy - Math.cos(a) * r);
+        ln.setAttribute("stroke", "#555");
+        ln.setAttribute("stroke-width", (i % 2 === 0) ? 2 : 1);
+        svg.insertBefore(ln, svg.querySelector("line, polygon, text"));
+      }
+    }
+
+    // draw ticks down a vertical roll/pitch tape
+    function buildTape(svg) {
+      for (let y = 30; y <= 270; y += 30) {
+        const ln = document.createElementNS(SVG_NS, "line");
+        ln.setAttribute("x1", 20); ln.setAttribute("y1", y);
+        ln.setAttribute("x2", 40); ln.setAttribute("y2", y);
+        ln.setAttribute("stroke", "#555"); ln.setAttribute("stroke-width", 1);
+        svg.insertBefore(ln, svg.firstChild.nextSibling);
+      }
+    }
+
+    buildDial(document.getElementById("speed_svg"), 12);
+    buildDial(document.getElementById("altitude_svg"), 10);
+    buildDial(document.getElementById("heading_svg"), 12);
+    buildTape(document.getElementById("roll_svg"));
+    buildTape(document.getElementById("pitch_svg"));
+
+    // clamp a number into a range
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+
+    /* =====================================================================
+       LEAFLET MAP SETUP
+       ===================================================================== */
+
+    // start centered on Chandler, AZ; it will recenter on the
+    // first real GPS fix anyway
+    const map = L.map("map", { zoomControl: true }).setView([33.3062, -111.8413], 12);
+
+    // a 1x1 transparent PNG - shown for any tile that wasn't downloaded,
+    // so gaps in the offline cache look clean instead of "broken image"
+    const BLANK_TILE =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAoMBgDTD2qgAAAAASUVORK5CYII=";
+
+    // LOCAL map tiles - reads ./tiles/{z}/{x}/{y}.png that setup-offline.ps1
+    // saved. minZoom/maxZoom MUST match the zoom range you downloaded,
+    // otherwise Leaflet asks for tiles that don't exist.
+    L.tileLayer("tiles/{z}/{x}/{y}.png", {
+      minZoom: 10,
+      maxZoom: 15,
+      errorTileUrl: BLANK_TILE,
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+
+    // the plane marker is just a rotating airplane glyph in a div.
+    // the emoji points roughly north-east, so we rotate by (heading - 45).
+    const planeIcon = L.divIcon({
+      className: "",
+      html: '<div id="plane_glyph" style="font-size:26px;line-height:26px;' +
+            'text-shadow:0 0 3px #000;transform:rotate(0deg);">&#9992;&#65039;</div>',
+      iconSize: [26, 26],
+      iconAnchor: [13, 13]
+    });
+    const planeMarker = L.marker([33.3062, -111.8413], { icon: planeIcon }).addTo(map);
+
+    // the blue breadcrumb trail the plane leaves behind
+    const trail = L.polyline([], { color: "#3aa0ff", weight: 3 }).addTo(map);
+
+    let mapCentered = false;   // only auto-zoom-in once, on the first fix
+
+    // Your GPS sends lat/lon as NMEA "ddmm.mmmm" - degrees and minutes
+    // glued together - plus a direction letter. e.g. lat 3318.8534 / "N"
+    // means 33 deg 18.8534 min = 33.31422. Leaflet wants plain decimal
+    // degrees, so convert here.
+    function toDecimalDegrees(raw, dir) {
+      const whole = Math.floor(Math.abs(raw) / 100);        // dd
+      const minutes = Math.abs(raw) - whole * 100;          // mm.mmmm
+      let deg = whole + minutes / 60;
+      if (dir === "S" || dir === "W") deg = -deg;           // hemisphere
+      return deg;
+    }
+
+    // move the plane + extend the trail
+    function updateMap(lat, lon, headingDeg) {
+      const pt = [lat, lon];
+      planeMarker.setLatLng(pt);
+      trail.addLatLng(pt);
+
+      const glyph = document.getElementById("plane_glyph");
+      if (glyph) glyph.style.transform = "rotate(" + (headingDeg - 45) + "deg)";
+
+      // 15 = deepest zoom the offline cache has (see tileLayer maxZoom)
+      if (!mapCentered) { map.setView(pt, 15); mapCentered = true; }
+      else { map.panTo(pt); }
+    }
+
+
+    /* =====================================================================
+       WEBSOCKET  (unchanged data handling, plus gauge + map updates)
+       ===================================================================== */
+
     const socket = new WebSocket("ws://10.42.0.1:8080");
     socket.onopen = () => console.log("connected");
     const heading_needle = document.getElementById("heading_needle");
     const altitude_needle = document.getElementById("altitude_needle");
+    const speed_needle = document.getElementById("speed_needle");
     const attitude_ball = document.getElementById("attitude_ball");
     const attitude_pitch = document.getElementById("attitude_pitch");
+    const roll_marker = document.getElementById("roll_marker");
+    const pitch_marker = document.getElementById("pitch_marker");
     const min_value = 0;
-    const max_value = 400;
+    const max_value = 20000;   // altitude dial full-scale, in FEET (0 - 20,000 ft)
     const min_angle = -120;
     const max_angle = 120;
     let calculated_altitude = 0;
@@ -74,10 +384,17 @@
     function updateAttitude(roll, pitch) {
       attitude_ball.setAttribute("transform", `rotate(${roll},100,100)`);
       attitude_pitch.setAttribute("transform", `translate(0,${pitch})`);
+
+      // move the little green markers on the roll / pitch tapes.
+      // tape center is y=150; ~3px per degree, clamped to the tape.
+      const rollY = clamp(150 - roll * 3, 15, 285);
+      const pitchY = clamp(150 - pitch * 3, 15, 285);
+      roll_marker.setAttribute("transform", `translate(0,${rollY - 150})`);
+      pitch_marker.setAttribute("transform", `translate(0,${pitchY - 150})`);
+
+      document.getElementById("roll_val").textContent = Math.round(roll) + "°";
+      document.getElementById("pitch_val").textContent = Math.round(pitch) + "°";
     }
-
-
-
 
 
     socket.onmessage = (event) => {
@@ -102,15 +419,26 @@
         return;
       } else {
         console.log("Received valid JSON data.");
- 
+
         if (jsonObject.gps.valid) {
-          altitude = jsonObject.gps.altitude;
+          // the GPS reports altitude in METRES - convert to feet for the display
+          altitude = jsonObject.gps.altitude * 3.28084;
           calculated_altitude =
             ((altitude - min_value) / (max_value - min_value)) *
             (max_angle - min_angle) +
             min_angle;
+
+          // ---- big number readouts (speed + altitude) ----
+          const knots = jsonObject.gps.speedKnots || 0;
+          document.getElementById("speed_val").textContent = Math.round(knots);
+          document.getElementById("alt_val").textContent =
+            Math.round(altitude).toLocaleString();
+
+          // speed needle: 0..240 kt mapped onto the -135..+135 deg sweep
+          const speedAngle = -135 + (clamp(knots, 0, 240) / 240) * 270;
+          speed_needle.setAttribute("transform", `rotate(${speedAngle} 100 100)`);
         }
-      
+
         new_heading = jsonObject.compass.headingDegrees;
 
         if (!jsonObject.mpu.valid) {
@@ -174,6 +502,11 @@
           console.log("Raw Y: " + jsonObject.compass.rawY);
           console.log("Raw Z: " + jsonObject.compass.rawZ);
           console.log("Valid: " + jsonObject.compass.valid);
+
+          // ---- heading number readout ----
+          document.getElementById("hdg_val").textContent =
+            String(Math.round(jsonObject.compass.headingDegrees) % 360)
+              .padStart(3, "0") + "°";
         }
 
         if (
@@ -213,7 +546,7 @@
           console.log(
             "Lon: " + jsonObject.gps.lon + " " + jsonObject.gps.lonDir,
           );
-          console.log("Fix Quality: " + jsonObject.gps.fixQual);
+          console.log("Fix Quality: " + jsonObject.gps.fixQuality);
           console.log("Sat Count: " + jsonObject.gps.satCount);
           console.log("HDOP: " + jsonObject.gps.hdop);
           console.log("Altitude: " + jsonObject.gps.altitude);
@@ -235,7 +568,7 @@
           console.log(
             "Lon: " + jsonObject.gps.lon + " " + jsonObject.gps.lonDir,
           );
-          console.log("Fix Quality: " + jsonObject.gps.fixQual);
+          console.log("Fix Quality: " + jsonObject.gps.fixQuality);
           console.log("Sat Count: " + jsonObject.gps.satCount);
           console.log("HDOP: " + jsonObject.gps.hdop);
           console.log("Altitude: " + jsonObject.gps.altitude);
@@ -249,6 +582,13 @@
             jsonObject.gps.time.sec,
           );
           gpsTimeCheck = jsonObject.gps.time;
+
+          // ---- fresh GPS fix -> move the plane on the map ----
+          const lat = toDecimalDegrees(jsonObject.gps.lat, jsonObject.gps.latDir);
+          const lon = toDecimalDegrees(jsonObject.gps.lon, jsonObject.gps.lonDir);
+          if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)) {
+            updateMap(lat, lon, new_heading);
+          }
         }
         console.log("");
 
