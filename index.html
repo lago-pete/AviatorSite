@@ -3,17 +3,6 @@
 
 <head>
   <title>Flight Dashboard</title>
-
-  <!-- ============================================================= -->
-  <!-- LEAFLET (the map library) - loaded from LOCAL files so this   -->
-  <!-- page works with NO internet.                                  -->
-  <!--                                                               -->
-  <!-- Before first use, run  setup-offline.ps1  once while online.  -->
-  <!-- That downloads:                                               -->
-  <!--   ./lib/leaflet.js  ./lib/leaflet.css   (the library)         -->
-  <!--   ./tiles/{z}/{x}/{y}.png               (the map images)      -->
-  <!-- After that, everything below runs offline.                    -->
-  <!-- ============================================================= -->
   <link rel="stylesheet" href="lib/leaflet.css" />
   <script src="lib/leaflet.js"></script>
 
@@ -159,6 +148,53 @@
       border-radius: 8px;
       background: #1a1a1a;
     }
+
+    /* ---------- bottom strip: everything else the sensors report ---------- */
+    #wrap {
+      margin-bottom: 10px;
+    }
+
+    .extra-group h3 {
+      margin: 0 0 8px;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #8a94a0;
+      border-bottom: 1px solid #2a2a2a;
+      padding-bottom: 4px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 6px 10px;
+    }
+
+    .mini {
+      background: #0d0d0d;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+
+    .mini-label {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: #8a94a0;
+    }
+
+    .mini-val {
+      font-size: 18px;
+      font-weight: bold;
+      color: #cfd6dd;
+    }
+
+    .mini-unit {
+      font-size: 9px;
+      color: #8a94a0;
+      margin-left: 3px;
+    }
   </style>
 </head>
 
@@ -272,6 +308,22 @@
 
   </div>
 
+  <!-- ================= BOTTOM: BME ENVIRONMENT SENSOR ================= -->
+  <div id="extra" class="panel">
+
+    <!-- BME680 environment -->
+    <div class="extra-group">
+      <h3>ENVIRONMENT (BME)</h3>
+      <div class="mini-grid">
+        <div class="mini"><span class="mini-label">TEMP</span><span class="mini-val" id="bme_temp">--</span><span class="mini-unit">&deg;C</span></div>
+        <div class="mini"><span class="mini-label">HUMIDITY</span><span class="mini-val" id="bme_hum">--</span><span class="mini-unit">%</span></div>
+        <div class="mini"><span class="mini-label">PRESSURE</span><span class="mini-val" id="bme_press">--</span><span class="mini-unit">hPa</span></div>
+        <div class="mini"><span class="mini-label">GAS</span><span class="mini-val" id="bme_gas">--</span><span class="mini-unit">k&#8486;</span></div>
+      </div>
+    </div>
+
+  </div>
+
 
   <script>
     /* =====================================================================
@@ -318,6 +370,23 @@
 
     // clamp a number into a range
     function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    // write a value into one of the small bottom-strip readouts.
+    // pass nothing (or NaN/null) for `val` to blank it with "--".
+    function mini(id, val, digits) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (val === null || val === undefined || (typeof val === "number" && !isFinite(val))) {
+        el.textContent = "--";
+        return;
+      }
+      el.textContent = (typeof val === "number" && digits !== undefined)
+        ? val.toFixed(digits)
+        : val;
+    }
+
+    // blank a list of readouts at once
+    function miniBlank(ids) { ids.forEach(id => mini(id)); }
 
 
     /* =====================================================================
@@ -388,7 +457,7 @@
 
 
     /* =====================================================================
-       WEBSOCKET  (unchanged data handling, plus gauge + map updates)
+       WEBSOCKET  
        ===================================================================== */
 
     const socket = new WebSocket("ws://10.42.0.1:8080");
@@ -412,19 +481,38 @@
     let acumulated_diff = 0;
     let gpsTimeCheck = { hour: 0, minute: 0, sec: 0 };
 
+    /* ---- attitude ball tuning -------------------------------------------
+       PITCH_SCALE: pixels the horizon slides per degree of pitch. The ball
+       window is 180px tall (radius 90), so ~3.3 px/deg puts the horizon at
+       the edge of the window near 27 deg nose-up / nose-down - about right
+       for a light-aircraft attitude indicator. The old code used 1 px/deg,
+       which is why pitching the unit "barely moved" the horizon.
+
+       PITCH_TRIM / ROLL_TRIM: degrees to subtract so the horizon sits level
+       when the aircraft actually is level. With the unit sitting flat, read
+       the console "attitude: roll=.. pitch=.." line and copy those numbers
+       here (that removes the sensor's mounting offset - the reason it shows
+       mostly sky at rest). */
+    const PITCH_SCALE = 3.3;
+    const PITCH_TRIM = 0;
+    const ROLL_TRIM = 0;
+
     function updateAttitude(roll, pitch) {
-      attitude_ball.setAttribute("transform", `rotate(${roll},100,100)`);
-      attitude_pitch.setAttribute("transform", `translate(0,${pitch})`);
+      const r = roll - ROLL_TRIM;
+      const p = pitch - PITCH_TRIM;
+
+      attitude_ball.setAttribute("transform", `rotate(${r},100,100)`);
+      attitude_pitch.setAttribute("transform", `translate(0,${p * PITCH_SCALE})`);
 
       // move the little green markers on the roll / pitch tapes.
       // tape center is y=150; ~3px per degree, clamped to the tape.
-      const rollY = clamp(150 - roll * 3, 15, 285);
-      const pitchY = clamp(150 - pitch * 3, 15, 285);
+      const rollY = clamp(150 - r * 3, 15, 285);
+      const pitchY = clamp(150 - p * 3, 15, 285);
       roll_marker.setAttribute("transform", `translate(0,${rollY - 150})`);
       pitch_marker.setAttribute("transform", `translate(0,${pitchY - 150})`);
 
-      document.getElementById("roll_val").textContent = Math.round(roll) + "°";
-      document.getElementById("pitch_val").textContent = Math.round(pitch) + "°";
+      document.getElementById("roll_val").textContent = Math.round(r) + "°";
+      document.getElementById("pitch_val").textContent = Math.round(p) + "°";
     }
 
 
@@ -496,6 +584,8 @@
           if (jsonObject.mpu.attitudeReady === false) {
             console.log("!!!!MPU Attitude Not Ready!!!!");
           } else {
+            console.log("attitude: roll=" + jsonObject.mpu.roll +
+              " pitch=" + jsonObject.mpu.pitch);
             updateAttitude(jsonObject.mpu.roll, jsonObject.mpu.pitch);
           }
 
@@ -508,6 +598,7 @@
           console.log("Pressure: " + "--------------------");
           console.log("Gas Resistance: " + "--------------------");
           console.log("Valid: " + "--------------------");
+          miniBlank(["bme_temp", "bme_hum", "bme_press", "bme_gas"]);
         } else {
           console.log("--- BME ---");
           console.log("Temperature: " + jsonObject.bme.temperature);
@@ -515,6 +606,12 @@
           console.log("Pressure: " + jsonObject.bme.pressure);
           console.log("Gas Resistance: " + jsonObject.bme.gasResistance);
           console.log("Valid: " + jsonObject.bme.valid);
+
+          mini("bme_temp", jsonObject.bme.temperature, 1);
+          mini("bme_hum", jsonObject.bme.humidity, 1);
+          mini("bme_press", jsonObject.bme.pressure, 1);
+          // gas resistance comes in ohms - show it in kilo-ohms
+          mini("bme_gas", jsonObject.bme.gasResistance / 1000, 1);
         }
 
         if (!jsonObject.compass.valid) {
@@ -633,9 +730,6 @@
         last_heading = new_heading;
         acumulated_diff += diff;
       }
-
-
-
       heading_needle.setAttribute(
         "transform",
         `rotate(${acumulated_diff},100,100)`,
